@@ -33,7 +33,8 @@ jobs:
           node scripts/run_ts_tests.cjs src/utils/bootSplash.test.ts src/utils/startupPresentation.test.ts
           npm run build
       - name: Build embedded application
-        run: cargo build --locked --profile ci -p cockpit-tools --bin cockpit-tools
+        # Plain cargo builds otherwise use devUrl even in a release profile.
+        run: cargo build --locked --profile ci -p cockpit-tools --bin cockpit-tools --features tauri/custom-protocol
       - name: Verify architecture and glibc requirements
         shell: bash
         run: |
