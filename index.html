@@ -51,6 +51,11 @@
         pointer-events: none;
       }
 
+      /* ARM64 WebKit reveals the committed tree without a fullscreen fade. */
+      html[data-webkit-startup-compat="true"] #app-boot-splash {
+        transition: none;
+      }
+
       .app-boot-mark {
         font-size: 18px;
         font-weight: 700;
@@ -125,6 +130,8 @@
     <div id="root"></div>
     <script>
       window.setTimeout(function () {
+        // The ARM WebKit path owns reveal timing after the page commit.
+        if (document.documentElement.dataset.webkitStartupCompat === "true") return;
         var splash = document.getElementById("app-boot-splash");
         if (splash) {
           splash.classList.add("is-hidden");

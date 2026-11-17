@@ -1,8 +1,8 @@
-import { useEffect, type ReactNode } from "react";
+import { useLayoutEffect, type ReactNode } from "react";
 import { setBootSplashStage } from "../utils/bootSplash";
 
 export function BootReadyMarker() {
-  useEffect(() => {
+  useLayoutEffect(() => {
     setBootSplashStage("page_ready");
   }, []);
   return null;

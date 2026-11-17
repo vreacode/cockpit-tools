@@ -1,0 +1,56 @@
+name: Jetson ARM64 (Ubuntu 22.04)
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-24.04-arm
+    # Use the runner's native ARM CPU, but link against Jammy's glibc 2.35.
+    container: ubuntu:22.04
+    env:
+      DEBIAN_FRONTEND: noninteractive
+    steps:
+      - name: Install native build dependencies
+        run: |
+          apt-get update
+          apt-get install -y --no-install-recommends ca-certificates curl git build-essential \
+            pkg-config xz-utils file libssl-dev libwebkit2gtk-4.1-dev \
+            libayatana-appindicator3-dev librsvg2-dev libnm-dev patchelf
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Check and build frontend
+        run: |
+          npm ci --no-audit --no-fund
+          npm run typecheck
+          node scripts/run_ts_tests.cjs src/utils/bootSplash.test.ts src/utils/startupPresentation.test.ts
+          npm run build
+      - name: Build embedded application
+        run: cargo build --locked --profile ci -p cockpit-tools --bin cockpit-tools
+      - name: Verify architecture and glibc requirements
+        shell: bash
+        run: |
+          set -euo pipefail
+          file target/ci/cockpit-tools | tee architecture.txt
+          readelf --version-info target/ci/cockpit-tools > elf-versions.txt
+          node --input-type=module -e '
+            import fs from "node:fs";
+            if (!fs.readFileSync("architecture.txt", "utf8").includes("aarch64")) throw Error("Wrong architecture");
+            const versions = [...fs.readFileSync("elf-versions.txt", "utf8").matchAll(/GLIBC_(\d+)\.(\d+)/g)];
+            if (versions.some(([, major, minor]) => +major > 2 || (+major === 2 && +minor > 35))) throw Error("Requires glibc newer than 2.35");
+          '
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cockpit-tools-jetson-ubuntu22.04-arm64
+          path: |
+            target/ci/cockpit-tools
+            architecture.txt
+            elf-versions.txt
+          if-no-files-found: error
