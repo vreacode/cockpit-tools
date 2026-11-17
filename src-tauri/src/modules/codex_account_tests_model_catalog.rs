@@ -1020,7 +1020,10 @@ fn opencode_go_catalog_upgrade_adds_vision_once_and_respects_explicit_settings()
             doc.get("model_provider").and_then(|item| item.as_str()),
             expected
         );
-        assert!(doc.get("model_providers").is_none(), "config: {content}");
+        for id in crate::modules::codex_history_provider_aliases::MANAGED_HISTORY_PROVIDER_IDS {
+            assert_eq!(doc["model_providers"][id]["requires_openai_auth"].as_bool(), Some(true));
+            assert!(doc["model_providers"][id].get("base_url").is_none());
+        }
     }
 
     /// 通用回归：工具写入的第三方 provider 引用必须在切回官方账号时还原。

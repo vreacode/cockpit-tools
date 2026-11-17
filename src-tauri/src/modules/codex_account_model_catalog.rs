@@ -2779,7 +2779,9 @@ fn write_api_provider_to_config_toml_with_options(
                 remove_managed_model_catalog_from_doc(&mut doc);
             }
             let _ = doc.remove(CODEX_CONFIG_MODEL_PROVIDER_KEY);
-            remove_managed_api_key_model_providers_from_doc(&mut doc);
+            crate::modules::codex_history_provider_aliases::write_builtin_aliases(
+                &mut doc, normalized.as_deref(),
+            )?;
             #[cfg(target_os = "windows")]
             {
                 write_windows_builtin_openai_provider_to_doc(&mut doc, normalized.as_deref())?;
@@ -3361,14 +3363,6 @@ fn rebuild_managed_catalog_from_existing(catalog_path: &Path) -> Result<(), Stri
     crate::modules::codex_managed_model_catalog_version::write_managed_catalog_meta(catalog_path)
 }
 
-fn collect_managed_api_key_provider_ids() -> HashSet<String> {
-    HashSet::from([
-        CODEX_RUNTIME_MODEL_PROVIDER_ID.to_string(),
-        CODEX_COCKPIT_API_PROVIDER_ID.to_string(),
-        CODEX_LEGACY_API_KEY_OPENAI_PROVIDER_ID.to_string(),
-    ])
-}
-
 fn is_managed_model_provider_id(provider_id: &str) -> bool {
     matches!(
         provider_id,
@@ -3377,24 +3371,6 @@ fn is_managed_model_provider_id(provider_id: &str) -> bool {
             | CODEX_COCKPIT_API_PROVIDER_ID
             | CODEX_LEGACY_API_KEY_OPENAI_PROVIDER_ID
     )
-}
-
-fn remove_managed_api_key_model_providers_from_doc(doc: &mut Document) {
-    let managed_provider_ids = collect_managed_api_key_provider_ids();
-    let should_remove_model_providers = doc
-        .get_mut(CODEX_CONFIG_MODEL_PROVIDERS_KEY)
-        .and_then(|item| item.as_table_mut())
-        .map(|model_providers| {
-            for provider_id in &managed_provider_ids {
-                let _ = model_providers.remove(provider_id.as_str());
-            }
-            model_providers.is_empty()
-        })
-        .unwrap_or(false);
-
-    if should_remove_model_providers {
-        let _ = doc.remove(CODEX_CONFIG_MODEL_PROVIDERS_KEY);
-    }
 }
 
 #[cfg(target_os = "windows")]

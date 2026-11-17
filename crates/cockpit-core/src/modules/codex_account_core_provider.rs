@@ -802,7 +802,9 @@ fn write_api_provider_to_config_toml(
     match provider_config.mode {
         CodexApiProviderMode::OpenaiBuiltin => {
             let _ = doc.remove(CODEX_CONFIG_MODEL_PROVIDER_KEY);
-            remove_managed_api_key_model_providers_from_doc(&mut doc);
+            crate::modules::codex_history_provider_aliases::write_builtin_aliases(
+                &mut doc, normalized.as_deref(),
+            )?;
             match normalized.as_deref() {
                 Some(base_url) => {
                     doc[CODEX_CONFIG_OPENAI_BASE_URL_KEY] = value(base_url);
@@ -850,32 +852,6 @@ fn write_api_provider_to_config_toml(
         fs::create_dir_all(parent).map_err(|e| format!("创建 config.toml 目录失败: {}", e))?;
     }
     fs::write(&config_path, doc.to_string()).map_err(|e| format!("写入 config.toml 失败: {}", e))
-}
-
-fn collect_managed_api_key_provider_ids() -> HashSet<String> {
-    HashSet::from([
-        CODEX_RUNTIME_MODEL_PROVIDER_ID.to_string(),
-        CODEX_COCKPIT_API_PROVIDER_ID.to_string(),
-        CODEX_LEGACY_API_KEY_OPENAI_PROVIDER_ID.to_string(),
-    ])
-}
-
-fn remove_managed_api_key_model_providers_from_doc(doc: &mut Document) {
-    let managed_provider_ids = collect_managed_api_key_provider_ids();
-    let should_remove_model_providers = doc
-        .get_mut(CODEX_CONFIG_MODEL_PROVIDERS_KEY)
-        .and_then(|item| item.as_table_mut())
-        .map(|model_providers| {
-            for provider_id in &managed_provider_ids {
-                let _ = model_providers.remove(provider_id.as_str());
-            }
-            model_providers.is_empty()
-        })
-        .unwrap_or(false);
-
-    if should_remove_model_providers {
-        let _ = doc.remove(CODEX_CONFIG_MODEL_PROVIDERS_KEY);
-    }
 }
 
 fn write_api_key_provider_to_config_toml(

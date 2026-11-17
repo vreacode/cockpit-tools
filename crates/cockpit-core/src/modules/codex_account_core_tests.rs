@@ -1025,7 +1025,7 @@
     }
 
     #[test]
-    fn config_toml_cleans_runtime_provider_for_builtin_openai() {
+    fn config_toml_replaces_runtime_provider_with_current_auth_aliases() {
         let base_dir = make_temp_dir("codex-config-clean-runtime-provider-test");
         let config_path = base_dir.join("config.toml");
         fs::write(
@@ -1072,9 +1072,9 @@ requires_openai_auth = false
 
         let content = fs::read_to_string(&config_path).expect("read config");
         assert!(!content.contains("model_provider = "));
-        assert!(!content.contains("[model_providers.codex_local_access]"));
-        assert!(!content.contains("[model_providers.cockpit_api]"));
-        assert!(!content.contains("[model_providers.openai_api_key]"));
+        assert!(content.contains("[model_providers.codex_local_access]"));
+        assert!(content.contains("[model_providers.cockpit_api]"));
+        assert!(content.contains("[model_providers.openai_api_key]"));
         assert!(!content.contains("experimental_bearer_token"));
         assert!(content.contains("[model_providers.user_manual_provider_not_managed]"));
         assert!(!content.contains("openai_base_url"));
@@ -1135,7 +1135,8 @@ requires_openai_auth = false
         let content = fs::read_to_string(&config_path).expect("read config");
         assert!(content.contains("openai_base_url = \"https://relay.example.com/v1\""));
         assert!(!content.contains("model_provider = "));
-        assert!(!content.contains("[model_providers."));
+        assert!(!content.contains("[model_providers.relay]"));
+        assert!(content.contains("[model_providers.codex_local_access]"));
         assert!(!content.contains("experimental_bearer_token"));
         assert_eq!(
             read_api_provider_from_config_toml(&base_dir),

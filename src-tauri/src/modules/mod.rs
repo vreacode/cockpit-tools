@@ -46,6 +46,8 @@ pub mod codebuddy_oauth;
 pub mod codebuddy_session;
 pub mod codebuddy_session_transfer;
 pub mod codex_account;
+#[path = "../../../crates/cockpit-core/src/modules/codex_history_provider_aliases.rs"]
+pub(crate) mod codex_history_provider_aliases;
 pub mod codex_device_restrictions;
 pub mod chatgpt_plan;
 pub mod chatgpt_plan_service;

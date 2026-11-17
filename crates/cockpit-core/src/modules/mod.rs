@@ -13,6 +13,7 @@ pub mod codebuddy_cn_oauth;
 pub mod codebuddy_instance;
 pub mod codebuddy_oauth;
 pub mod codex_account;
+pub(crate) mod codex_history_provider_aliases;
 pub mod codex_instance;
 pub mod codex_oauth;
 pub mod codex_quota;

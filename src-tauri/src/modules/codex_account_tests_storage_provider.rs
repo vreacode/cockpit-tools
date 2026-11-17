@@ -309,7 +309,7 @@
     }
 
     #[test]
-    fn config_toml_removes_runtime_provider_when_switching_to_builtin_openai() {
+    fn config_toml_replaces_runtime_providers_with_current_auth_history_aliases() {
         let base_dir = make_temp_dir("codex-config-clean-managed-provider-test");
         let config_path = base_dir.join("config.toml");
         fs::write(
@@ -361,11 +361,17 @@ requires_openai_auth = false
         assert!(content.contains("model_provider = \"openai\""));
         #[cfg(not(target_os = "windows"))]
         assert!(!content.contains("model_provider = "));
-        assert!(!content.contains("[model_providers.codex_local_access]"));
+        assert!(content.contains("[model_providers.codex_local_access]"));
         assert!(!content.contains("experimental_bearer_token = \"sk-history\""));
-        assert!(!content.contains("[model_providers.cockpit_api]"));
-        assert!(!content.contains("[model_providers.openai_api_key]"));
+        assert!(content.contains("[model_providers.cockpit_api]"));
+        assert!(content.contains("[model_providers.openai_api_key]"));
         assert!(content.contains("[model_providers.user_manual_provider_not_managed]"));
+        let parsed = content.parse::<toml_edit::Document>().unwrap();
+        for id in crate::modules::codex_history_provider_aliases::MANAGED_HISTORY_PROVIDER_IDS {
+            assert_eq!(parsed["model_providers"][id]["requires_openai_auth"].as_bool(), Some(true));
+            assert!(parsed["model_providers"][id].get("base_url").is_none());
+            assert!(parsed["model_providers"][id].get("experimental_bearer_token").is_none());
+        }
         assert!(!content.contains("model_catalog_json"));
         assert!(!content.contains("openai_base_url"));
         assert!(content.contains("model_context_window = 1000000"));
@@ -495,8 +501,8 @@ requires_openai_auth = false
         assert!(content.contains("model_provider = \"openai_http\""));
         assert!(content.contains("[model_providers.openai_http]"));
         assert!(content.contains("openai_base_url = \"https://api.example.com/v1\""));
-        assert!(!content.contains("[model_providers.codex_local_access]"));
-        assert!(!content.contains("[model_providers.cockpit_api]"));
+        assert!(content.contains("[model_providers.codex_local_access]"));
+        assert!(content.contains("[model_providers.cockpit_api]"));
 
         fs::remove_dir_all(&base_dir).expect("cleanup temp dir");
     }
@@ -1425,7 +1431,8 @@ supports_websockets = false
             .expect("parse current config");
         assert_eq!(config["openai_base_url"].as_str(), Some("https://relay.example.com/v1"));
         assert!(config.get("model_provider").is_none());
-        assert!(config.get("model_providers").and_then(|providers| providers.get(CODEX_RUNTIME_MODEL_PROVIDER_ID)).is_none());
+        assert_eq!(config["model_providers"][CODEX_RUNTIME_MODEL_PROVIDER_ID]["requires_openai_auth"].as_bool(), Some(true));
+        assert_eq!(config["model_providers"][CODEX_RUNTIME_MODEL_PROVIDER_ID]["base_url"].as_str(), Some("https://relay.example.com/v1"));
     }
 
     #[test]
@@ -2232,7 +2239,8 @@ supports_websockets = false
             .expect("parse config");
         assert_eq!(config["openai_base_url"].as_str(), Some("https://relay.example.com/v1"));
         assert!(config.get("model_provider").is_none());
-        assert!(config.get("model_providers").and_then(|providers| providers.get(CODEX_RUNTIME_MODEL_PROVIDER_ID)).is_none());
+        assert_eq!(config["model_providers"][CODEX_RUNTIME_MODEL_PROVIDER_ID]["requires_openai_auth"].as_bool(), Some(true));
+        assert_eq!(config["model_providers"][CODEX_RUNTIME_MODEL_PROVIDER_ID]["base_url"].as_str(), Some("https://relay.example.com/v1"));
         assert!(config.get("model_catalog_json").is_none());
         assert!(!base_dir
             .join(super::CODEX_MANAGED_MODEL_CATALOG_FILE)

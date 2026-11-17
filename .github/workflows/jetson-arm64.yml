@@ -26,6 +26,8 @@ jobs:
           node-version: 22
           cache: npm
       - uses: dtolnay/rust-toolchain@stable
+      - name: Test saved-session provider compatibility
+        run: node scripts/test_codex_history_provider_aliases.cjs
       - name: Check and build frontend
         run: |
           npm ci --no-audit --no-fund
