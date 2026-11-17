@@ -30,7 +30,7 @@ jobs:
         run: |
           npm ci --no-audit --no-fund
           npm run typecheck
-          node scripts/run_ts_tests.cjs src/utils/bootSplash.test.ts src/utils/startupPresentation.test.ts
+          node scripts/run_ts_tests.cjs src/utils/bootSplash.test.ts src/utils/startupPresentation.test.ts tests/startupFonts.test.ts
           npm run build
       - name: Build embedded application
         # Plain cargo builds otherwise use devUrl even in a release profile.

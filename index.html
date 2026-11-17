@@ -5,14 +5,35 @@
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Cockpit Tools</title>
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      rel="stylesheet"
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap"
-      media="print"
-      onload="this.media='all'"
-    />
+    <script id="app-startup-fonts">
+      (function () {
+        // On Jetson WebKit an external font request can crash NetworkProcess
+        // and strand Vite's dynamic stylesheet load events. Use system fonts
+        // before making any external request; keep other platforms unchanged.
+        var armLinuxWebKit = '__TAURI_INTERNALS__' in window &&
+          /^Linux\b/i.test(navigator.platform) &&
+          /\b(aarch64|arm64)\b/i.test(navigator.platform + ' ' + navigator.userAgent) &&
+          /AppleWebKit\//.test(navigator.userAgent) &&
+          !/(Chrome|Chromium|Edg)\//.test(navigator.userAgent);
+        if (armLinuxWebKit) {
+          document.documentElement.dataset.webkitStartupCompat = 'true';
+          return;
+        }
+        ['https://fonts.googleapis.com', 'https://fonts.gstatic.com'].forEach(function (url) {
+          var preconnect = document.createElement('link');
+          preconnect.rel = 'preconnect';
+          preconnect.href = url;
+          if (url.indexOf('gstatic') !== -1) preconnect.crossOrigin = 'anonymous';
+          document.head.appendChild(preconnect);
+        });
+        var font = document.createElement('link');
+        font.rel = 'stylesheet';
+        font.href = 'https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap';
+        font.media = 'print';
+        font.onload = function () { font.media = 'all'; };
+        document.head.appendChild(font);
+      })();
+    </script>
     <style>
       html,
       body {

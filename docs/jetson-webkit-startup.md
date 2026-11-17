@@ -91,3 +91,35 @@ remove configuration, accounts, LocalStorage, WebKit cache or user data.
 - The formal rebuilt executable and installation via the GNOME icon remain to
   be verified. An intermittent baseline means successful preview launches alone
   cannot establish a complete cure.
+
+## Follow-up: formal artifact diagnosis and production build flag
+
+The first Actions artifact omitted `tauri/custom-protocol`. Tauri's `dev` cfg
+is selected by that feature, independently of Cargo's release profile; the
+artifact tried devUrl and reported no frontend stage. The workflow now passes
+`--features tauri/custom-protocol` explicitly to embed and load production dist.
+
+The next production artifact (run 44070000400) exposed a separate, reproducible
+resource stall on this Jetson: `script_loaded` appeared, `#root` remained empty,
+App JS and CSS fetched successfully with HTTP 200, but the dynamically appended
+App stylesheet had no CSSStyleSheet and never completed its load event. Native
+logs reported `WebLoaderStrategy::networkProcessCrashed()` and
+`internallyFailedLoadTimerFired()`. A direct App module import completed; Vite's
+original import was still waiting for its stylesheet. This is distinct from
+DOM-committed-but-not-presented behavior, so a repaint alone cannot address it.
+
+For isolation, the same production executable was run with only its index HTML
+replaced, omitting the Google Fonts preconnect and stylesheet links. All JS/CSS
+remained embedded in the executable, with the same accounts/configuration. With
+no Inspector and no window operations, `script_loaded` -> `react_mount_start` ->
+`splash_removed` completed in about four seconds and the native compositor
+capture showed the full UI; NetworkProcess stayed alive. The shim was a temporary
+validation instrument in /tmp and is not part of the installed fix.
+
+The HTML now guards font loading synchronously, before any external font
+request, only for Tauri ARM64 Linux WebKit. That path uses existing system font
+fallbacks; Windows, macOS, Linux x64 and Chromium keep the Google Fonts links.
+`tests/startupFonts.test.ts` executes the actual HTML bootstrap with platform
+variants and checks no font/preconnect links are emitted on the affected path.
+The distinction between avoiding the network-process trigger and the bounded
+first-layout mitigation is intentional; neither clears WebKit or account data.
