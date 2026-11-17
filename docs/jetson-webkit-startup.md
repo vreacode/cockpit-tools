@@ -1,7 +1,8 @@
 # Jetson ARM64 / WebKitGTK startup
 
-This change is a mitigation for an intermittent first-presentation failure, not a
-confirmed WebKit driver root-cause fix. An already running Jetson window showed
+This change avoids a reproduced external-font resource stall on Jetson WebKit
+and mitigates an intermittent first-presentation failure. It does not establish
+the underlying WebKit/driver defect. An already running Jetson window showed
 only the body gradient while React had committed visible, nonzero layout. The
 main window is visible by default; `visible: false` in tauri.conf.json belongs to
 the floating card. Subsequent unmodified launches sometimes presented normally.
@@ -76,7 +77,7 @@ remove configuration, accounts, LocalStorage, WebKit cache or user data.
 
 ## Validation recorded on this device
 
-- Relevant five unit tests passed, including platform isolation, exact inline
+- Relevant six unit tests passed, including font bootstrap, platform isolation, exact inline
   style restoration, hidden-startup handling, frame ordering and no repaint loop.
 - Full `npm run typecheck` passed.
 - Production Vite build passed with existing chunk-size/dynamic import warnings.
@@ -88,9 +89,9 @@ remove configuration, accounts, LocalStorage, WebKit cache or user data.
   visible in native screen captures across three full process launches. Each
   logged one rebuild and one splash removal. This is a preview, not an installed
   production fix; the shim is not part of the source fix or Actions artifact.
-- The formal rebuilt executable and installation via the GNOME icon remain to
-  be verified. An intermittent baseline means successful preview launches alone
-  cannot establish a complete cure.
+- Those initial preview launches were insufficient: the subsequent production
+  artifact exposed the external-font stall described below. Final production
+  and desktop-entry verification is recorded at the end of this document.
 
 ## Follow-up: formal artifact diagnosis and production build flag
 
@@ -123,3 +124,32 @@ fallbacks; Windows, macOS, Linux x64 and Chromium keep the Google Fonts links.
 variants and checks no font/preconnect links are emitted on the affected path.
 The distinction between avoiding the network-process trigger and the bounded
 first-layout mitigation is intentional; neither clears WebKit or account data.
+
+## Final production verification (2026-11-17)
+
+GitHub Actions run `44074451848`, source commit
+`bcd1c08690254f40d49601bd5b73b3e02a53d0bd`, completed successfully. The downloaded
+ARM64 executable requires at most GLIBC 2.34; all shared libraries resolve on
+this Ubuntu 22.04 Jetson. Its SHA-256 is
+`be30beef5e92674fb0672c9220012de5eae00465af3a3a81d7d5c4b7d90f08f2`.
+
+Three full process launches of that executable completed startup in 5, 4 and
+5 seconds. Each emitted exactly one `webkit_root_rebuilt` and `splash_removed`.
+All three native compositor window captures showed the complete interface.
+These tests used the embedded production resources, with no preload shim,
+Inspector, software/compositor flags, manual JS, or window operations.
+
+After backing up the original executable, launcher and desktop entries, the
+verified artifact was atomically installed at `target/release/cockpit-tools`.
+Both visible desktop entries and both protocol handlers now use that stable
+path. The old launcher now only execs the executable; its xdotool/wmctrl loop
+was removed. Launching `Cockpit Tools.desktop` with `gio launch` completed the
+same sequence; its native window capture also showed the complete interface.
+Both desktop-entry trials passed in 6–7 seconds, including a two-second
+post-startup wait for capture.
+
+Backups and a hash manifest are retained in
+`target/jetson-webkit-backup/20261117-194217/`. No account/config/cache directory
+was cleared or edited by the repair. No local Rust build was performed.
+These repeated launches validate the current Jetson session; cold boot and
+other operating systems have not been exercised on this device.
